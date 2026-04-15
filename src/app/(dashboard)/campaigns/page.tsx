@@ -101,6 +101,9 @@ export default function CampaignsPage() {
       if (!res.ok) throw new Error(result.error || 'Bilinmeyen hata');
       setBroadcastSuccess(true);
       setBroadcastResult(result);
+      if (result.errors?.length > 0) {
+        console.error('[Kampanya Hataları]', result.errors);
+      }
     } catch (e: unknown) {
       alert(`Gönderim başarısız: ${e instanceof Error ? e.message : String(e)}`);
     } finally {

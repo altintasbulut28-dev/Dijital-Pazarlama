@@ -151,15 +151,17 @@ export async function POST(request: Request) {
       } else {
         const err = await res.text();
         failed++;
-        errors.push(err);
+        errors.push(`${toEmail}: ${err}`);
+        console.error('[APEX Broadcast] Resend hata:', err);
       }
     }
 
     return NextResponse.json({
-      success: true,
+      success: sent > 0,
       sent,
       failed,
       sandbox: isSandbox,
+      errors: errors.slice(0, 3),
       message: isSandbox
         ? `Test modu: E-posta ajans sahibine gönderildi (${sent} adet). Herkese göndermek için Vercel'e FROM_EMAIL ekleyin.`
         : `${sent} müşteriye başarıyla gönderildi.${failed > 0 ? ` ${failed} başarısız.` : ''}`,
