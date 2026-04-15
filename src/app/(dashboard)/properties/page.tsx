@@ -27,11 +27,13 @@ export default function PropertiesPage() {
     return p.durum === filter;
   });
 
-  const copyLink = (id: string) => {
+  const copyLink = (prop: Property) => {
     const origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
-    const link = `${origin}/form?mulk=${id}`;
+    // emlakci_telefon alanında agent UUID'si saklanıyor
+    const agentParam = prop.emlakci_telefon ? `&agent=${prop.emlakci_telefon}` : '';
+    const link = `${origin}/form?mulk=${prop.id}${agentParam}`;
     navigator.clipboard.writeText(link);
-    setCopiedId(id);
+    setCopiedId(prop.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -112,7 +114,7 @@ export default function PropertiesPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, flex: 1 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12, flex: 1 }}>
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Fiyat</div>
                   <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--accent-gold)' }}>
@@ -126,11 +128,21 @@ export default function PropertiesPage() {
                   </div>
                 </div>
               </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Emlakçı</div>
+                {prop.emlakci_adi ? (
+                  <div style={{ fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(212,168,83,0.1)', color: 'var(--accent-gold)', padding: '3px 10px', borderRadius: 20 }}>
+                    {prop.emlakci_adi}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>Atanmamış</div>
+                )}
+              </div>
 
               <div style={{ display: 'flex', gap: 8, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
                 <button
                   className="btn-secondary"
-                  onClick={() => copyLink(prop.id)}
+                  onClick={() => copyLink(prop)}
                   style={{ flex: 1, padding: '8px', fontSize: 12 }}
                 >
                   {copiedId === prop.id ? <CheckCircle size={14} color="var(--success)" /> : <Copy size={14} />}

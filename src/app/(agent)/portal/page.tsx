@@ -252,7 +252,8 @@ export default function AgentPortal() {
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: 12 }}>
                         <th style={{ padding: '12px 20px', fontWeight: 600 }}>MÜŞTERİ</th>
-                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>TALEP</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>İLGİLENDİĞİ EV</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>RANDEVU</th>
                         <th style={{ padding: '12px 20px', fontWeight: 600 }}>DURUM</th>
                         <th style={{ padding: '12px 20px', fontWeight: 600 }}>İŞLEM</th>
                       </tr>
@@ -261,23 +262,39 @@ export default function AgentPortal() {
                       {myLeads.map(lead => {
                         const pipeline = STATUS_PIPELINE.find(s => s.key === lead.status);
                         const isUpdating = updatingId === lead.id;
+                        // Bu müşteriye ait müşteri-booked randevu (Gösterimi içeren)
+                        const apt = appointments.find(a => a.lead_id === lead.id && a.message.includes('Gösterimi'));
                         return (
                           <tr key={lead.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                             <td style={{ padding: '14px 20px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: '#fff', marginBottom: 2 }}>
-                                {lead.full_name}
-                              </div>
+                              <div style={{ fontWeight: 600, color: '#fff', marginBottom: 2 }}>{lead.full_name}</div>
                               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lead.phone}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                💰 {budgetLabels[lead.budget] || lead.budget}
+                              </div>
                             </td>
                             <td style={{ padding: '14px 20px' }}>
-                              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                {lead.property_type ? lead.property_type.charAt(0).toUpperCase() + lead.property_type.slice(1) : '—'}
-                              </div>
-                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                {budgetLabels[lead.budget] || lead.budget}
-                              </div>
-                              {lead.location_pref && (
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>📍 {lead.location_pref}</div>
+                              {lead.property_baslik ? (
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-gold)' }}>
+                                  🏠 {lead.property_baslik}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>Belirtilmemiş</div>
+                              )}
+                            </td>
+                            <td style={{ padding: '14px 20px' }}>
+                              {apt ? (
+                                <div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', marginBottom: 2 }}>✅ Randevu Var</div>
+                                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                    📅 {new Date(apt.reminder_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                    ⏰ {new Date(apt.reminder_date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>— Randevu Yok</div>
                               )}
                             </td>
                             <td style={{ padding: '14px 20px' }}>
@@ -287,15 +304,12 @@ export default function AgentPortal() {
                             </td>
                             <td style={{ padding: '14px 20px' }}>
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                {/* Telefon */}
                                 <a href={`tel:${lead.phone}`} className="btn-secondary" style={{ padding: '5px 10px', fontSize: 11, gap: 4 }}>
                                   <Phone size={12} /> Ara
                                 </a>
-                                {/* WhatsApp */}
                                 <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ padding: '5px 10px', fontSize: 11, gap: 4 }}>
                                   <MessageSquare size={12} /> WA
                                 </a>
-                                {/* Pipeline butonu - bir sonraki aşamaya taşı */}
                                 {pipeline?.nextStatus && (
                                   <button
                                     disabled={isUpdating}
@@ -306,7 +320,6 @@ export default function AgentPortal() {
                                     {isUpdating ? '...' : pipeline.nextLabel}
                                   </button>
                                 )}
-                                {/* Kayıp işaretle */}
                                 {lead.status !== 'kazanildi' && lead.status !== 'kayip' && (
                                   <button
                                     disabled={isUpdating}
@@ -328,51 +341,60 @@ export default function AgentPortal() {
             </div>
           </div>
 
-          {/* Sağ: Takvim */}
+          {/* Sağ: Randevular */}
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={15} color="var(--accent-gold)" /> Yaklaşan Takipler
+              <Calendar size={15} color="var(--accent-gold)" /> Müşteri Randevuları
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {appointments
-                .filter(a => new Date(a.reminder_date) >= new Date())
-                .slice(0, 6)
-                .map(apt => {
+              {(() => {
+                // Sadece müşterinin takvimden bizzat aldığı randevular
+                const bookedApts = appointments
+                  .filter(a => a.message.includes('Gösterimi') && new Date(a.reminder_date) >= new Date())
+                  .sort((a, b) => new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime())
+                  .slice(0, 8);
+
+                if (bookedApts.length === 0) return (
+                  <div className="glass-card" style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <Calendar size={28} style={{ opacity: 0.3, margin: '0 auto 10px', display: 'block' }} />
+                    <p style={{ fontSize: 13 }}>Henüz randevu alınmamış.</p>
+                  </div>
+                );
+
+                return bookedApts.map(apt => {
                   const aptLead = myLeads.find(l => l.id === apt.lead_id);
                   const d = new Date(apt.reminder_date);
                   return (
-                    <div key={apt.id} className="glass-card" style={{ padding: 16, borderLeft: '3px solid var(--accent-gold)' }}>
-                      <div style={{ fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700, marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{d.toLocaleDateString('tr-TR', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                        <span style={{ background: 'rgba(212,168,83,0.1)', padding: '1px 6px', borderRadius: 4 }}>
-                          {d.getHours().toString().padStart(2, '0')}:{d.getMinutes().toString().padStart(2, '0')}
-                        </span>
+                    <div key={apt.id} className="glass-card" style={{ padding: 16, borderLeft: '3px solid var(--success)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 700, marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>📅 {d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
                       </div>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: '#fff', marginBottom: 4 }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-gold)', marginBottom: 6 }}>
+                        ⏰ {d.getHours().toString().padStart(2, '0')}:{d.getMinutes().toString().padStart(2, '0')}
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: '#fff', marginBottom: 2 }}>
                         {aptLead?.full_name || 'Müşteri'}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        {apt.message}
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                        📞 {aptLead?.phone}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--accent-gold)', marginBottom: 10 }}>
+                        🏠 {apt.message.replace(' Gösterimi', '')}
                       </div>
                       {aptLead && (
-                        <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-                          <a href={`tel:${aptLead.phone}`} className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <a href={`tel:${aptLead.phone}`} className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', gap: 4, flex: 1, justifyContent: 'center' }}>
                             <PhoneCall size={11} /> Ara
                           </a>
-                          <a href={`https://wa.me/${aptLead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', gap: 4 }}>
+                          <a href={`https://wa.me/${aptLead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', gap: 4, flex: 1, justifyContent: 'center' }}>
                             <MessageSquare size={11} /> WA
                           </a>
                         </div>
                       )}
                     </div>
                   );
-                })}
-              {appointments.filter(a => new Date(a.reminder_date) >= new Date()).length === 0 && (
-                <div className="glass-card" style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <Calendar size={28} style={{ opacity: 0.3, margin: '0 auto 10px', display: 'block' }} />
-                  <p style={{ fontSize: 13 }}>Yaklaşan takip yok.</p>
-                </div>
-              )}
+                });
+              })()}
             </div>
           </div>
 

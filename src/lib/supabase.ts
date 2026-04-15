@@ -47,6 +47,7 @@ export interface Property {
   emlakci_adi: string | null;
   emlakci_telefon: string | null;
   komisyon_orani: number;
+  agent_id: string | null;
 }
 
 export interface Note {

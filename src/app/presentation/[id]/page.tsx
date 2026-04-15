@@ -14,11 +14,10 @@ export default function PresentationPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [appointmentStatus, setAppointmentStatus] = useState<'idle' | 'loading' | 'success'>('idle');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('');
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
-  const timeSlots = ["10:00", "11:30", "13:00", "14:30", "16:00", "17:30"];
   const [tempName, setTempName] = useState('');
   const [tempPhone, setTempPhone] = useState('');
 
@@ -68,12 +67,18 @@ export default function PresentationPage() {
 
   async function requestAppointment() {
     if (!selectedDate || !selectedTime) {
-      alert("Lütfen takvimden bir tarih ve saat seçin.");
+      alert("Lütfen bir tarih ve saat seçin.");
+      return;
+    }
+
+    if (selectedTime > '16:00') {
+      alert("En geç saat 16:00 seçebilirsiniz.");
+      setSelectedTime('16:00');
       return;
     }
 
     if (bookedSlots.includes(selectedTime)) {
-      alert("Seçtiğiniz saat (" + selectedTime + ") başka bir müşterimize ayrılmıştır. Lütfen farklı bir saat veya dakika belirleyin.");
+      alert("Seçtiğiniz saat (" + selectedTime + ") başka bir müşterimize ayrılmıştır. Lütfen farklı bir saat seçin.");
       return;
     }
 
@@ -206,7 +211,7 @@ export default function PresentationPage() {
           {property.sunum_url && (
             <a href={property.sunum_url} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ flex: 1, justifyContent: 'center', padding: '16px' }}>
               <ImageIcon size={18} />
-              Kataloğu İndir
+              Sunumu Şimdi Gör
             </a>
           )}
         </div>
@@ -244,50 +249,33 @@ export default function PresentationPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>⏰ Tercih Edilen Saat</label>
-                  <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                    <input 
-                      type="time" 
-                      value={selectedTime}
-                      onChange={e => setSelectedTime(e.target.value)}
-                      className="input-field"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', padding: '12px', flex: 1 }}
-                    />
-                  </div>
-                  
+                  <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>⏰ Tercih Edilen Saat <span style={{ fontSize: 11, opacity: 0.6 }}>(En geç 16:00)</span></label>
+                  <input
+                    type="time"
+                    value={selectedTime}
+                    min="09:00"
+                    max="16:00"
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val && val > '16:00') {
+                        setSelectedTime('16:00');
+                      } else {
+                        setSelectedTime(val);
+                      }
+                    }}
+                    className="input-field"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', padding: '12px', width: '100%' }}
+                  />
+                  {selectedTime && selectedTime > '16:00' && (
+                    <div style={{ fontSize: 12, color: 'var(--hot)', marginTop: 6, fontWeight: 600 }}>
+                      ⚠️ En geç saat 16:00 seçebilirsiniz.
+                    </div>
+                  )}
                   {bookedSlots.includes(selectedTime) && (
-                    <div style={{ fontSize: 12, color: 'var(--hot)', marginBottom: 12, fontWeight: 600 }}>
+                    <div style={{ fontSize: 12, color: 'var(--hot)', marginTop: 6, fontWeight: 600 }}>
                       ⚠️ Bu saat dolu. Lütfen farklı seçin.
                     </div>
                   )}
-
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Hızlı Örnek Seçimler:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {timeSlots.map(time => {
-                      const isBooked = bookedSlots.includes(time);
-                      return (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        disabled={isBooked}
-                        style={{
-                          background: selectedTime === time ? 'var(--accent-gold)' : 'transparent',
-                          color: isBooked ? 'var(--text-muted)' : (selectedTime === time ? '#000' : 'var(--text-secondary)'),
-                          border: selectedTime === time ? 'none' : '1px solid var(--border-subtle)',
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          fontSize: 13,
-                          fontWeight: selectedTime === time ? 700 : 500,
-                          cursor: isBooked ? 'not-allowed' : 'pointer',
-                          textDecoration: isBooked ? 'line-through' : 'none',
-                          opacity: isBooked ? 0.3 : 1,
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {time}
-                      </button>
-                    )})}
-                  </div>
                 </div>
               </div>
               

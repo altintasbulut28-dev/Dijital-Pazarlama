@@ -117,8 +117,6 @@ export default function LeadFormPage() {
 
     if (!error) {
       const insertedLeadId = inserted?.[0]?.id;
-      setResult({ leadId: insertedLeadId });
-      setSubmitted(true);
 
       if (typeof window !== 'undefined' && insertedLeadId) {
         localStorage.setItem('apex_lead_id', insertedLeadId);
@@ -149,6 +147,14 @@ export default function LeadFormPage() {
         await supabase.from('reminders').insert(reminders);
       }
 
+      // Mülk varsa direkt sunuma yönlendir, yoksa teşekkür ekranı göster
+      if (property?.id && insertedLeadId) {
+        router.push(`/presentation/${property.id}?lead=${insertedLeadId}`);
+        return;
+      }
+
+      setResult({ leadId: insertedLeadId });
+      setSubmitted(true);
     } else {
       alert('Lead kaydedilemedi. Lütfen veritabanı kurulumunu kontrol edin. Hata: ' + error.message);
     }

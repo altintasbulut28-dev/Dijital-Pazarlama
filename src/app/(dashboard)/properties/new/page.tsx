@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase, type Agent } from '@/lib/supabase';
 import { ArrowLeft, Save, Building } from 'lucide-react';
 
 export default function NewPropertyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [formData, setFormData] = useState({
     baslik: '',
     aciklama: '',
@@ -21,9 +22,15 @@ export default function NewPropertyPage() {
     durum: 'Aktif',
     fotograf_url: '',
     sunum_url: '',
-    emlakci_adi: '',
+    agent_id: '',
     komisyon_orani: '2',
   });
+
+  useEffect(() => {
+    supabase.from('agents').select('*').eq('is_active', true).order('name').then(({ data }) => {
+      if (data) setAgents(data as Agent[]);
+    });
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,7 +40,8 @@ export default function NewPropertyPage() {
     e.preventDefault();
     setLoading(true);
 
-    const dataToInsert = {
+    const selectedAgent = agents.find(a => a.id === formData.agent_id);
+    const dataToInsert: Record<string, unknown> = {
       baslik: formData.baslik,
       aciklama: formData.aciklama,
       fiyat: formData.fiyat ? parseFloat(formData.fiyat) : null,
@@ -44,7 +52,8 @@ export default function NewPropertyPage() {
       durum: formData.durum,
       fotograf_url: formData.fotograf_url,
       sunum_url: formData.sunum_url,
-      emlakci_adi: formData.emlakci_adi,
+      emlakci_adi: selectedAgent?.name || null,
+      emlakci_telefon: selectedAgent?.id || null,
       komisyon_orani: formData.komisyon_orani ? parseFloat(formData.komisyon_orani) : 2,
     };
 
@@ -219,16 +228,24 @@ export default function NewPropertyPage() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Emlakçı Adı
+                Emlakçı
               </label>
-              <input
-                type="text"
-                name="emlakci_adi"
-                className="input-field"
-                placeholder="Örn: Ahmet Bey"
-                value={formData.emlakci_adi}
+              <select
+                name="agent_id"
+                className="select-field"
+                value={formData.agent_id}
                 onChange={handleChange}
-              />
+              >
+                <option value="">— Emlakçı Seç —</option>
+                {agents.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+              {agents.length === 0 && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Henüz emlakçı eklenmemiş. <Link href="/agents" style={{ color: 'var(--accent-gold)' }}>Emlakçılar sayfasından ekle →</Link>
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>

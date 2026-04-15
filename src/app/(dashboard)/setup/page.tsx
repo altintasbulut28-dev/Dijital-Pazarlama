@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS properties (
   sunum_url TEXT,
   emlakci_adi TEXT,
   emlakci_telefon TEXT,
-  komisyon_orani NUMERIC DEFAULT 2
+  komisyon_orani NUMERIC DEFAULT 2,
+  agent_id UUID REFERENCES agents(id) ON DELETE SET NULL
 );
 
 -- Emlakçılar (Agents) tablosu
