@@ -20,6 +20,7 @@ export default function CampaignsPage() {
   const [broadcastPropertyId, setBroadcastPropertyId] = useState('');
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; sandbox: boolean; message: string } | null>(null);
 
   // Followup: seçili müşteriler
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
@@ -67,23 +68,39 @@ export default function CampaignsPage() {
       ? agentLeads.filter(l => selectedLeads.includes(l.id))
       : agentLeads;
 
-    const validEmails = targetLeads.map(l => l.email).filter(Boolean) as string[];
-    if (validEmails.length === 0) validEmails.push('musteri_yok_test@apex.os');
+    const withEmail = targetLeads.filter(l => l.email);
+    if (withEmail.length === 0) {
+      alert('Seçili müşterilerin hiçbirinde e-posta adresi yok. Müşteri formunda e-posta toplanmalı.');
+      setSendingBroadcast(false);
+      return;
+    }
 
     const prop = properties.find(p => p.id === broadcastPropertyId);
-    const subject = `Özel Fırsat: ${prop?.baslik}`;
-    const urlLink = `${window.location.origin}/presentation/${prop?.id}`;
-    const textBody = `Merhaba,\n\nKriterlerinizi detaylıca inceledik ve size harika bir fırsat sunmak istiyoruz:\n\n📍 ${prop?.baslik}\nFiyat: ${prop?.fiyat?.toLocaleString('tr-TR')} ₺\n\nPazar fiyatının altındaki bu mülk için hemen dijital sunumu inceleyin:\n🔗 ${urlLink}\n\nİyi günler dileriz.`;
+
+    const recipients = withEmail.map(l => ({ email: l.email!, name: l.full_name }));
 
     try {
       const res = await fetch('/api/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails: validEmails, subject, text: textBody }),
+        body: JSON.stringify({
+          recipients,
+          subject: `Özel Fırsat: ${prop?.baslik}`,
+          property: {
+            id: prop?.id,
+            title: prop?.baslik,
+            location: prop?.konum,
+            price: prop?.fiyat ? `${prop.fiyat.toLocaleString('tr-TR')} ₺` : 'Fiyat Sorunuz',
+            description: prop?.aciklama,
+          },
+          agentName: selectedAgent?.name || null,
+          baseUrl: window.location.origin,
+        }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Bilinmeyen hata');
       setBroadcastSuccess(true);
+      setBroadcastResult(result);
     } catch (e: unknown) {
       alert(`Gönderim başarısız: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -261,11 +278,23 @@ export default function CampaignsPage() {
                       <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
                   </div>
-                  <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Başarıyla Gönderildi!</h2>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-                    {selectedAgent?.name} müşterilerine kampanya e-postası iletildi.
+                  <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>
+                    {broadcastResult?.sandbox ? 'Test Gönderimi Yapıldı!' : 'Başarıyla Gönderildi!'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: 16, maxWidth: 400, margin: '0 auto 16px' }}>
+                    {broadcastResult?.message}
                   </p>
-                  <button onClick={() => { setBroadcastSuccess(false); setBroadcastPropertyId(''); setSelectedLeads([]); }} className="btn-primary" style={{ padding: '14px 28px' }}>
+                  {broadcastResult?.sandbox && (
+                    <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: 16, marginBottom: 24, maxWidth: 440, margin: '0 auto 24px' }}>
+                      <p style={{ color: '#eab308', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>⚠️ Test Modundasın</p>
+                      <p style={{ color: '#9ca3af', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
+                        Herkese göndermek için Vercel Dashboard'a git →<br />
+                        <strong style={{ color: '#fff' }}>Settings → Environment Variables</strong><br />
+                        <code style={{ color: '#d4a853' }}>FROM_EMAIL</code> = kendi domain emailin (örn: info@siten.com)
+                      </p>
+                    </div>
+                  )}
+                  <button onClick={() => { setBroadcastSuccess(false); setBroadcastPropertyId(''); setSelectedLeads([]); setBroadcastResult(null); }} className="btn-primary" style={{ padding: '14px 28px' }}>
                     Yeni Kampanya Yap
                   </button>
                 </div>
