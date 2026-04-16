@@ -81,7 +81,7 @@ export default function LeadFormPage() {
   };
 
   const canProceed = () => {
-    if (step === 0) return form.full_name.trim().length > 0 && form.phone.trim().length > 0;
+    if (step === 0) return form.full_name.trim().length > 0 && form.phone.trim().length > 0 && form.email.trim().length > 0;
     if (step === 1) return form.budget !== '';
     return false;
   };
@@ -246,7 +246,7 @@ export default function LeadFormPage() {
                 <input className="input-field" placeholder="05XX XXX XX XX" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-posta (Opsiyonel)</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-posta *</label>
                 <input className="input-field" type="email" placeholder="ornek@email.com" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
               </div>
               <div>
