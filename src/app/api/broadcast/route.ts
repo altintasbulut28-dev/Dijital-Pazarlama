@@ -8,8 +8,10 @@ function buildHtmlEmail(params: {
   propertyDescription: string | null;
   presentationUrl: string;
   agentName: string | null;
+  agentPhone: string | null;
+  agentEmail: string | null;
 }) {
-  const { customerName, propertyTitle, propertyLocation, propertyPrice, propertyDescription, presentationUrl, agentName } = params;
+  const { customerName, propertyTitle, propertyLocation, propertyPrice, propertyDescription, presentationUrl, agentName, agentPhone, agentEmail } = params;
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -81,8 +83,10 @@ function buildHtmlEmail(params: {
               <!-- FOOTER -->
               <div style="background:#0d1117;border-top:1px solid #1f2937;padding:24px 40px;text-align:center;">
                 ${agentName ? `<p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">Danışmanınız: <strong style="color:#fff;">${agentName}</strong></p>` : ''}
+                ${agentPhone ? `<p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">📞 <a href="tel:${agentPhone}" style="color:#d4a853;text-decoration:none;">${agentPhone}</a></p>` : ''}
+                ${agentEmail ? `<p style="margin:0 0 12px;font-size:13px;color:#9ca3af;">✉️ Bu e-postayı yanıtlayarak danışmanınıza ulaşabilirsiniz.</p>` : ''}
                 <p style="margin:0;font-size:12px;color:#4b5563;">
-                  Bu e-posta Apex OS aracılığıyla gönderilmiştir. Artık almak istemiyorsanız lütfen yanıt verin.
+                  Bu e-posta Apex OS aracılığıyla gönderilmiştir.
                 </p>
               </div>
 
@@ -100,7 +104,7 @@ function buildHtmlEmail(params: {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { recipients, subject, property, agentName, baseUrl } = body;
+    const { recipients, subject, property, agentName, agentEmail, agentPhone, baseUrl } = body;
 
     // Eski format uyumluluğu (emails array)
     const emailList: { email: string; name: string }[] = recipients || (body.emails || []).map((e: string) => ({ email: e, name: 'Müşteri' }));
@@ -130,7 +134,12 @@ export async function POST(request: Request) {
         propertyDescription: property?.description || null,
         presentationUrl: `${baseUrl}/presentation/${property?.id}`,
         agentName: agentName || null,
+        agentPhone: agentPhone || null,
+        agentEmail: agentEmail || null,
       });
+
+      // Reply-To: emlakçının emailine ayarla — müşteri cevaplarsa direkt emlakçıya gider
+      const replyTo = agentEmail && !isSandbox ? agentEmail : undefined;
 
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -141,6 +150,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: [toEmail],
+          reply_to: replyTo,
           subject: subject || `Özel Fırsat: ${property?.title}`,
           html,
         }),

@@ -56,7 +56,8 @@ export default function CampaignsPage() {
   const getAlternativePropertyUrl = (lead: Lead) => {
     const altProp = properties.find(p => p.id !== lead.property_id);
     if (!altProp) return '#';
-    const message = `Merhaba ${lead.full_name}, geçtiğimiz günlerde ilanımızla ilgilenmiştiniz. Eğer o mülk size uymadıysa, bütçenize çok uygun olan şu yeni fırsatımıza göz atmak ister misiniz?\n\n📍 ${altProp.baslik}\n🔗 ${window.location.origin}/presentation/${altProp.id}`;
+    const agentLine = selectedAgent?.phone ? `\n\n📞 Danışmanınız ${selectedAgent.name}: ${selectedAgent.phone}` : '';
+    const message = `Merhaba ${lead.full_name}, geçtiğimiz günlerde ilanımızla ilgilenmiştiniz. Bütçenize uygun yeni bir fırsat mülkümüz var, göz atmak ister misiniz?\n\n📍 ${altProp.baslik}\n🔗 ${window.location.origin}/presentation/${altProp.id}${agentLine}`;
     return `https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
   };
 
@@ -94,6 +95,8 @@ export default function CampaignsPage() {
             description: prop?.aciklama,
           },
           agentName: selectedAgent?.name || null,
+          agentEmail: selectedAgent?.email || null,
+          agentPhone: selectedAgent?.phone || null,
           baseUrl: window.location.origin,
         }),
       });
@@ -244,7 +247,7 @@ export default function CampaignsPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
                         <a
-                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Merhaba ${lead.full_name}, geçen günkü mülk sunumunu incelediniz mi? Neler düşünüyorsunuz?`)}`}
+                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Merhaba ${lead.full_name}, geçen günkü mülk sunumunu incelediniz mi? Neler düşünüyorsunuz?\n\n${selectedAgent?.name ? `Danışmanınız: ${selectedAgent.name}${selectedAgent.phone ? ` (${selectedAgent.phone})` : ''}` : ''}`)}`}
                           target="_blank" rel="noopener noreferrer"
                           className="btn-secondary" style={{ padding: '9px 14px', fontSize: 13 }}
                         >
