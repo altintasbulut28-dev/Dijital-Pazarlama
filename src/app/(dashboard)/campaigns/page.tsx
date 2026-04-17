@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, type Lead, type Property, type Agent } from '@/lib/supabase';
-import { Megaphone, MessageSquare, Send, Users, ChevronRight, Sparkles, ChevronDown } from 'lucide-react';
+import { Megaphone, MessageSquare, Send, Users, ChevronRight, Sparkles, ChevronDown, Copy, Check } from 'lucide-react';
 
 export default function CampaignsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -24,6 +24,7 @@ export default function CampaignsPage() {
 
   // Followup: seçili müşteriler
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [copiedWa, setCopiedWa] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -53,11 +54,29 @@ export default function CampaignsPage() {
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
   const agentLeads = leads.filter(l => l.assigned_to === selectedAgentId);
 
+  const agentWaLink = selectedAgent?.phone
+    ? `https://wa.me/${selectedAgent.phone.replace(/[^0-9]/g, '')}`
+    : null;
+
+  const copyAgentWaLink = () => {
+    if (!agentWaLink) return;
+    navigator.clipboard.writeText(agentWaLink);
+    setCopiedWa(true);
+    setTimeout(() => setCopiedWa(false), 2000);
+  };
+
+  const getAgentContactLine = () => {
+    if (!selectedAgent) return '';
+    const waLine = selectedAgent.phone
+      ? `\n\n💬 Sorularınız için danışmanınız ${selectedAgent.name} ile iletişime geçin:\nhttps://wa.me/${selectedAgent.phone.replace(/[^0-9]/g, '')}`
+      : selectedAgent.phone ? `\n\n📞 Danışmanınız ${selectedAgent.name}: ${selectedAgent.phone}` : '';
+    return waLine;
+  };
+
   const getAlternativePropertyUrl = (lead: Lead) => {
     const altProp = properties.find(p => p.id !== lead.property_id);
     if (!altProp) return '#';
-    const agentLine = selectedAgent?.phone ? `\n\n📞 Danışmanınız ${selectedAgent.name}: ${selectedAgent.phone}` : '';
-    const message = `Merhaba ${lead.full_name}, geçtiğimiz günlerde ilanımızla ilgilenmiştiniz. Bütçenize uygun yeni bir fırsat mülkümüz var, göz atmak ister misiniz?\n\n📍 ${altProp.baslik}\n🔗 ${window.location.origin}/presentation/${altProp.id}${agentLine}`;
+    const message = `Merhaba ${lead.full_name}, geçtiğimiz günlerde ilanımızla ilgilenmiştiniz. Bütçenize uygun yeni bir fırsat mülkümüz var, göz atmak ister misiniz?\n\n📍 ${altProp.baslik}\n🔗 ${window.location.origin}/presentation/${altProp.id}${getAgentContactLine()}`;
     return `https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
   };
 
@@ -153,14 +172,36 @@ export default function CampaignsPage() {
         </div>
 
         {selectedAgent && (
-          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#0a0e1a' }}>
-              {selectedAgent.name.charAt(0).toUpperCase()}
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#0a0e1a' }}>
+                {selectedAgent.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{selectedAgent.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{agentLeads.length} müşteri atanmış</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{selectedAgent.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{agentLeads.length} müşteri atanmış</div>
-            </div>
+
+            {/* Emlakçı WA Linki */}
+            {agentWaLink ? (
+              <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 700, marginBottom: 3 }}>📱 {selectedAgent.name} — WhatsApp Linki</div>
+                  <code style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{agentWaLink}</code>
+                </div>
+                <button
+                  onClick={copyAgentWaLink}
+                  style={{ background: copiedWa ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copiedWa ? 'rgba(34,197,94,0.4)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: copiedWa ? 'var(--success)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', flexShrink: 0 }}
+                >
+                  {copiedWa ? <><Check size={14} /> Kopyalandı</> : <><Copy size={14} /> Kopyala</>}
+                </button>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: 8 }}>
+                ⚠️ Bu emlakçının telefon numarası eksik — Emlakçılar sayfasından ekleyin.
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -247,7 +288,7 @@ export default function CampaignsPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
                         <a
-                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Merhaba ${lead.full_name}, geçen günkü mülk sunumunu incelediniz mi? Neler düşünüyorsunuz?\n\n${selectedAgent?.name ? `Danışmanınız: ${selectedAgent.name}${selectedAgent.phone ? ` (${selectedAgent.phone})` : ''}` : ''}`)}`}
+                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Merhaba ${lead.full_name}, geçen günkü mülk sunumunu incelediniz mi? Neler düşünüyorsunuz?${getAgentContactLine()}`)}`}
                           target="_blank" rel="noopener noreferrer"
                           className="btn-secondary" style={{ padding: '9px 14px', fontSize: 13 }}
                         >
